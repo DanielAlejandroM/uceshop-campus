@@ -1,5 +1,6 @@
 # Imagen optimizada, ligera y con un usuario no-root por seguridad
 
+# Imagen base
 FROM python:3.11-slim
 
 # Crear usuario no-root por seguridad

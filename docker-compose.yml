@@ -1,0 +1,46 @@
+version: '3.9'
+
+services:
+  customer-db:
+    image: postgres:15-alpine
+    container_name: customer-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: customersdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./customer-service/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - customer_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d customersdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  customer-service:
+    build:
+      context: ./customer-service
+      dockerfile: Dockerfile
+    container_name: customer-service
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: customersdb
+      POSTGRES_HOST: customer-db
+      POSTGRES_PORT: 5432
+    depends_on:
+      customer-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+# Declaración de volúmenes persistentes
+volumes:
+  customer_db_data:
