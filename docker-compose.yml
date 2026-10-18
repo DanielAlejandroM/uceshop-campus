@@ -1,12 +1,13 @@
 version: '3.9'
 
 services:
+  # --- CUSTOMER SERVICE & DB ---
   customer-db:
     image: postgres:15-alpine
     container_name: customer-db
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 123456
+      POSTGRES_PASSWORD: "123456"
       POSTGRES_DB: customersdb
     ports:
       - "5432:5432"
@@ -41,6 +42,49 @@ services:
       timeout: 5s
       retries: 3
 
+
+# --- PRODUCT SERVICE & DB ---
+  product-db:
+    image: postgres:15-alpine
+    container_name: product-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "123456"
+      POSTGRES_DB: productsdb
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./product-service/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - product_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d productsdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  product-service:
+    build:
+      context: ./product-service
+      dockerfile: Dockerfile
+    container_name: product-service
+    ports:
+      - "8001:8001"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "123456"
+      POSTGRES_DB: productsdb
+      POSTGRES_HOST: product-db
+      POSTGRES_PORT: 5432
+    depends_on:
+      product-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
 # Declaración de volúmenes persistentes
 volumes:
   customer_db_data:
+  product_db_data:
