@@ -1,0 +1,19 @@
+# Variables de entorno (¡Nunca subir contraseñas reales!)
+.env
+
+# Archivos de Python y caché
+__pycache__/
+*.pyc
+*.pyo
+venv/
+env/
+
+# Archivos de bases de datos locales
+*.sqlite3
+*.db
+
+# Configuraciones de IDE (VS Code)
+.vscode/
+
+# Docker
+.docker/
