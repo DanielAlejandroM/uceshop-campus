@@ -10,16 +10,16 @@ CREATE TABLE IF NOT EXISTS products (
 
 INSERT INTO products (id, name, description, price, stock, category) 
 VALUES 
-    (1, 'Cuaderno Universitario UCE', 'Cuaderno de 100 hojas a cuadros con logo UCE', 2.50, 150, 'Papelería'),
-    (2, 'Esferográfico Azul', 'Bolígrafo de tinta seca punto mediano', 0.50, 300, 'Papelería'),
-    (3, 'Mochila Ergonómica', 'Mochila acolchada con compartimento para laptop 15.6"', 35.00, 40, 'Accesorios'),
-    (4, 'Termo Metálico UCE', 'Termo de acero inoxidable de 750ml para bebidas frías/calientes', 12.00, 80, 'Accesorios'),
-    (5, 'Calculadora Científica', 'Calculadora con 240 funciones avanzadas', 18.50, 25, 'Electrónica'),
-    (6, 'Memoria USB 64GB', 'Pendrive USB 3.0 de alta velocidad', 10.00, 60, 'Electrónica'),
-    (7, 'Camiseta Facultativa', 'Camiseta 100% algodón de la Facultad de Ingeniería', 15.00, 50, 'Ropa'),
-    (8, 'Taza Cerámica UCE', 'Taza institucional para café de 11oz', 5.00, 90, 'Hogar'),
-    (9, 'Organizador de Escritorio', 'Set de malla metálica para lápices y documentos', 8.50, 35, 'Papelería'),
-    (10, 'Mouse Inalámbrico', 'Mouse óptico ergonómico USB 2.4GHz', 11.00, 45, 'Electrónica')
+    (1, 'Cuaderno Universitario', 'Cuaderno de 100 hojas a cuadros con logo UCE', 2.00, 800, 'Papeles y escritura'),
+    (2, 'Esferográfico Azul', 'Esferográfico de punta fina de color azul', 0.50, 1000, 'Papeles y escritura'),
+    (3, 'Esferográfico Negro', 'Esferográfico de punta fina de color negro', 0.50, 1000, 'Papeles y escritura'),
+    (4, 'Carpeta de archivos', 'Carpeta anillada A4', 0.60, 100, 'Papeles y escritura'),
+    (5, 'Mochila', 'Mochila ergonómica con compartimento para laptop con el logo UCE', 20.00, 50, 'Accesorios'),
+    (6, 'Termo Metálico', 'Termo de acero inoxidable de 1 litro con el logo UCE', 10.00, 80, 'Accesorios'),
+    (7, 'Memoria USB', 'Pendrive USB de 16GB de capacidad', 10.00, 100, 'Tecnología'),
+    (8, 'Calculadora Científica', 'Calculadora con funciones avanzadas', 18.50, 50, 'Tecnología'),
+    (9, 'Cable USB', 'Cable de datos y carga tipo C', 7.00, 50, 'Tecnología'),
+    (10, 'Agua purificada', 'Agua embotellada de 1 litro', 0.80, 100, 'Bebidas y alimentos')
 ON CONFLICT (id) DO NOTHING;
 
 -- Sincronizar el contador de la secuencia SERIAL con el mayor ID existente (10)
