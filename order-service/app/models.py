@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional #el opcional está puesto para darle nombres a los customers y products (no se registran, aparecen)
 from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from pydantic import BaseModel
@@ -38,6 +38,7 @@ class OrderItemCreate(BaseModel):
 class OrderItemResponse(BaseModel):
     id: int
     product_id: int
+    product_name: Optional[str] = None  # Nombre del producto recuperado por HTTP
     quantity: int
     unit_price: float
 
@@ -51,6 +52,7 @@ class OrderCreate(BaseModel):
 class OrderResponse(BaseModel):
     id: int
     customer_id: int
+    customer_name: Optional[str] = None  # Nombre del cliente recuperado por HTTP
     status: str
     total: float
     created_at: datetime
