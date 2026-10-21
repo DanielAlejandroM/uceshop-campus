@@ -1,10 +1,12 @@
+SET TIMEZONE = 'America/Guayaquil';
+
 -- Script de base de datos idempotente para Órdenes
 CREATE TABLE IF NOT EXISTS orders (
     id SERIAL PRIMARY KEY,
     customer_id INT NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     total NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS order_items (
