@@ -1,3 +1,5 @@
+import threading
+from contextlib import asynccontextmanager
 from typing import List
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -5,8 +7,17 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.database import get_db
 from app.models import Product, ProductCreate, ProductResponse
+from app.consumer import start_consumer
 
-app = FastAPI(title="Product Service", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Lanzar el consumidor de RabbitMQ en un hilo secundario al iniciar el servicio
+    consumer_thread = threading.Thread(target=start_consumer, daemon=True)
+    consumer_thread.start()
+    yield
+
+app = FastAPI(title="Product Service", version="1.0.0", lifespan=lifespan)
 
 # Exponer métricas para Prometheus
 Instrumentator().instrument(app).expose(app)

@@ -15,6 +15,7 @@ COPY app ./app
 
 # Asignar permisos al usuario no-root
 RUN chown -R appuser:appuser /app
+# Forzar al contenedor a ejecutar el proceso como Non-root
 USER appuser
 
 EXPOSE 8000

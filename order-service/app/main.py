@@ -1,8 +1,10 @@
 import os
+import json
 from typing import List
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 import httpx
+import pika
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.database import get_db
@@ -14,10 +16,36 @@ Instrumentator().instrument(app).expose(app)
 
 CUSTOMER_SERVICE_URL = os.getenv("CUSTOMER_SERVICE_URL", "http://customer-service:8000")
 PRODUCT_SERVICE_URL = os.getenv("PRODUCT_SERVICE_URL", "http://product-service:8001")
+RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "rabbitmq")
 
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "service": "order-service"}
+
+# envía el JSON del evento a RabbitMQ al crear una orden
+def publish_order_created_event(order_data: dict):
+    """Publica un mensaje asíncrono en RabbitMQ notificando la creación de la orden"""
+    try:
+        connection = pika.BlockingConnection(
+            pika.ConnectionParameters(host=RABBITMQ_HOST, heartbeat=600, blocked_connection_timeout=300)
+        )
+        channel = connection.channel()
+        # Declarar cola durable para asegurar la entrega
+        channel.queue_declare(queue='order_created_queue', durable=True)
+
+        message = json.dumps(order_data)
+        channel.basic_publish(
+            exchange='',
+            routing_key='order_created_queue',
+            body=message,
+            properties=pika.BasicProperties(
+                delivery_mode=pika.DeliveryMode.Persistent  # Mensaje persistente en disco
+            )
+        )
+        connection.close()
+        print(f" [x] Evento 'OrderCreated' publicado en RabbitMQ para orden #{order_data.get('order_id')}")
+    except Exception as e:
+        print(f" [!] Error al publicar evento en RabbitMQ: {e}")
 
 #funcion auxiliar para enriquecer la orden con nombres mediante peticiones HTTP
 def enrich_order_data(order: Order, client: httpx.Client) -> OrderResponse:
@@ -57,7 +85,7 @@ def enrich_order_data(order: Order, client: httpx.Client) -> OrderResponse:
         customer_name=customer_name,
         status=order.status,
         total=float(order.total),
-        created_at=order.created_at,
+        #created_at=order.created_at,
         items=enriched_items
     )
 
@@ -79,13 +107,11 @@ def get_order(order_id: int, db: Session = Depends(get_db)):
 @app.post("/orders", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 def create_order(order_data: OrderCreate, db: Session = Depends(get_db)):
     # 1. Validar cliente por HTTP
-    customer_name = ""
     with httpx.Client() as client:
         try:
             cust_resp = client.get(f"{CUSTOMER_SERVICE_URL}/customers/{order_data.customer_id}")
             if cust_resp.status_code == 404:
                 raise HTTPException(status_code=400, detail="El cliente especificado no existe")
-            customer_name = cust_resp.json().get("name", "")
         except httpx.RequestError:
             raise HTTPException(status_code=503, detail="Customer Service no disponible")
         
@@ -116,7 +142,6 @@ def create_order(order_data: OrderCreate, db: Session = Depends(get_db)):
 
                 items_to_create.append({
                     "product_id": item.product_id,
-                    "product_name": product["name"],
                     "quantity": item.quantity,
                     "unit_price": unit_price
                 })
@@ -133,9 +158,8 @@ def create_order(order_data: OrderCreate, db: Session = Depends(get_db)):
     db.add(new_order)
     db.commit()
     db.refresh(new_order)
-    
 
-    # 4. Guardar los ítems de la orden
+    event_items = []
     for item_data in items_to_create:
         order_item = OrderItem(
             order_id=new_order.id,
@@ -144,9 +168,22 @@ def create_order(order_data: OrderCreate, db: Session = Depends(get_db)):
             unit_price=item_data["unit_price"]
         )
         db.add(order_item)
+        event_items.append({
+            "product_id": item_data["product_id"],
+            "quantity": item_data["quantity"]
+        })
 
     db.commit()
     db.refresh(new_order)
+
+    # 4. PUBLICACIÓN ASÍNCRONA DEL EVENTO EN RABBITMQ
+    event_payload = {
+        "event": "OrderCreated",
+        "order_id": new_order.id,
+        "customer_id": new_order.customer_id,
+        "items": event_items
+    }
+    publish_order_created_event(event_payload)
 
     # Devuelve la orden construida con los nombres incluidos
     with httpx.Client() as client:

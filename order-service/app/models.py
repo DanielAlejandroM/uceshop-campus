@@ -1,10 +1,14 @@
 from datetime import datetime
-from typing import List, Optional #el opcional está puesto para darle nombres a los customers y products (no se registran, aparecen)
+from zoneinfo import ZoneInfo
+from typing import List, Optional
 from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from pydantic import BaseModel
 
 from app.database import Base
+
+def get_ecuador_time():
+    return datetime.now(ZoneInfo("America/Guayaquil"))
 
 # --- Modelos de SQLAlchemy ---
 class Order(Base):
@@ -12,9 +16,9 @@ class Order(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     customer_id = Column(Integer, nullable=False)
-    status = Column(String, default="PENDING")
+    status = Column(String, default="COMPLETED")
     total = Column(Numeric(10, 2), default=0.00)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=get_ecuador_time)
 
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
 
@@ -38,7 +42,7 @@ class OrderItemCreate(BaseModel):
 class OrderItemResponse(BaseModel):
     id: int
     product_id: int
-    product_name: Optional[str] = None  # Nombre del producto recuperado por HTTP
+    product_name: Optional[str] = None
     quantity: int
     unit_price: float
 
@@ -52,10 +56,10 @@ class OrderCreate(BaseModel):
 class OrderResponse(BaseModel):
     id: int
     customer_id: int
-    customer_name: Optional[str] = None  # Nombre del cliente recuperado por HTTP
+    customer_name: Optional[str] = None
     status: str
     total: float
-    created_at: datetime
+    #created_at: datetime
     items: List[OrderItemResponse]
 
     class Config:

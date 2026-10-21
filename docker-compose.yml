@@ -1,6 +1,23 @@
 version: '3.9'
 
 services:
+  # --- RABBITMQ MESSAGE BROKER ---
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"     # Puerto del protocolo AMQP
+      - "15672:15672"   # Puerto del Panel Web de Administración (UI)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
   # --- CUSTOMER SERVICE & DB ---
   customer-db:
     image: postgres:15-alpine
@@ -29,7 +46,7 @@ services:
       - "8000:8000"
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 123456
+      POSTGRES_PASSWORD: "123456"
       POSTGRES_DB: customersdb
       POSTGRES_HOST: customer-db
       POSTGRES_PORT: 5432
@@ -75,8 +92,11 @@ services:
       POSTGRES_DB: productsdb
       POSTGRES_HOST: product-db
       POSTGRES_PORT: 5432
+      RABBITMQ_HOST: rabbitmq
     depends_on:
       product-db:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
@@ -118,12 +138,15 @@ services:
       POSTGRES_PORT: 5432
       CUSTOMER_SERVICE_URL: "http://customer-service:8000"
       PRODUCT_SERVICE_URL: "http://product-service:8001"
+      RABBITMQ_HOST: rabbitmq
     depends_on:
       order-db:
         condition: service_healthy
       customer-service:
         condition: service_healthy
       product-service:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
