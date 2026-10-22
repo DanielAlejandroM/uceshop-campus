@@ -1,6 +1,5 @@
 -- Script de base de datos idempotente
 
-
 CREATE TABLE IF NOT EXISTS customers (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -23,5 +22,5 @@ VALUES
     (10,'Daniel Alejandro Morocho', 'danielm@uce.edu.ec', '0987632342', 'El teleférico, La Comuna')
 ON CONFLICT (id) DO NOTHING;
 
--- Sincronizar el contador de la secuencia SERIAL con el mayor ID existente
+-- Sincroniza el contador de la secuencia serial con el mayor ID existente
 SELECT setval('customers_id_seq', (SELECT MAX(id) FROM customers));

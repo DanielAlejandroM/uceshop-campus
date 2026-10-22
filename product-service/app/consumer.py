@@ -14,6 +14,9 @@ def process_order_created_event(ch, method, properties, body):
         data = json.loads(body)
         print(f" [x] Mensaje recibido de RabbitMQ para Orden #{data.get('order_id')}")
 
+        # SIMULACIÓN: Hacemos que el procesamiento tarde 10 segundos por cada orden para ver la comunicación asincrona
+        #time.sleep(10)
+
         db: Session = SessionLocal()
         try:
             for item in data.get("items", []):
