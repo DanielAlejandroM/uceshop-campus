@@ -1,9 +1,6 @@
-# Imagen optimizada, ligera y con un usuario no-root por seguridad
-
-# Imagen base
 FROM python:3.11-slim
 
-# Crear usuario no-root por seguridad
+# Se crea el usuario no-root 
 RUN adduser --disabled-password --gecos '' appuser
 
 WORKDIR /app
@@ -13,9 +10,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 
-# Asignar permisos al usuario no-root
+# Se asigna permisos al usuario no-root
 RUN chown -R appuser:appuser /app
-# Forzar al contenedor a ejecutar el proceso como Non-root
+# Fuerza al contenedor a ejecutar el proceso como Non-root
 USER appuser
 
 EXPOSE 8000
