@@ -1,0 +1,171 @@
+services:
+  # --- RABBITMQ MESSAGE BROKER ---
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- CUSTOMER SERVICE & DB ---
+  customer-db:
+    image: postgres:15-alpine
+    container_name: customer-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "123456"
+      POSTGRES_DB: customersdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - customer_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d customersdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  customer-service:
+    image: 464403602908.dkr.ecr.us-east-1.amazonaws.com/customer-service:latest
+    container_name: customer-service
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "123456"
+      POSTGRES_DB: customersdb
+      POSTGRES_HOST: customer-db
+      POSTGRES_PORT: 5432
+    depends_on:
+      customer-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # --- PRODUCT SERVICE & DB ---
+  product-db:
+    image: postgres:15-alpine
+    container_name: product-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "123456"
+      POSTGRES_DB: productsdb
+    ports:
+      - "5433:5432"
+    volumes:
+      - product_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d productsdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  product-service:
+    image: 464403602908.dkr.ecr.us-east-1.amazonaws.com/product-service:latest
+    container_name: product-service
+    ports:
+      - "8001:8001"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "123456"
+      POSTGRES_DB: productsdb
+      POSTGRES_HOST: product-db
+      POSTGRES_PORT: 5432
+      RABBITMQ_HOST: rabbitmq
+    depends_on:
+      product-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # --- ORDER SERVICE & DB ---
+  order-db:
+    image: postgres:15-alpine
+    container_name: order-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "123456"
+      POSTGRES_DB: ordersdb
+    ports:
+      - "5434:5432"
+    volumes:
+      - order_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ordersdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  order-service:
+    image: 464403602908.dkr.ecr.us-east-1.amazonaws.com/order-service:latest
+    container_name: order-service
+    ports:
+      - "8002:8002"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "123456"
+      POSTGRES_DB: ordersdb
+      POSTGRES_HOST: order-db
+      POSTGRES_PORT: 5432
+      CUSTOMER_SERVICE_URL: "http://customer-service:8000"
+      PRODUCT_SERVICE_URL: "http://product-service:8001"
+      RABBITMQ_HOST: rabbitmq
+    depends_on:
+      order-db:
+        condition: service_healthy
+      customer-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # --- PROMETHEUS & GRAFANA ---
+  prometheus:
+    image: prom/prometheus:v2.49.1
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - customer-service
+      - product-service
+      - order-service
+
+  grafana:
+    image: grafana/grafana:10.3.1
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+
+volumes:
+  customer_db_data:
+  product_db_data:
+  order_db_data:
