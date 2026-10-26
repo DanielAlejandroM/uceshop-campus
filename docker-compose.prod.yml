@@ -3,6 +3,7 @@ services:
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: rabbitmq
+    restart: always
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -15,10 +16,11 @@ services:
         limits:
           memory: 300M
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 5672 || exit 1"]
+      interval: 5s
+      timeout: 3s
       retries: 5
+      start_period: 10s
     networks:
       default:
         aliases:
