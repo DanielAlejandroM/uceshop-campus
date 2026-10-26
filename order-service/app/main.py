@@ -29,9 +29,10 @@ def publish_order_created_event(order_data: dict):
         connection = pika.BlockingConnection(
             pika.ConnectionParameters(
                 host=RABBITMQ_HOST,
-                connection_attempts=2,
-                retry_delay=1,
-                socket_timeout=2.0
+                port=5672,
+                connection_attempts=5,        # Subimos a 5 intentos
+                retry_delay=2,                # 2 segundos de pausa entre reintentos
+                socket_timeout=10.0           # Le damos 10s a AWS para no expirar el socket
             )
         )
         channel = connection.channel()
