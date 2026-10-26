@@ -1,7 +1,7 @@
-import os
+mport os
 import json
 from typing import List
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 import httpx
 import pika
@@ -27,10 +27,14 @@ def publish_order_created_event(order_data: dict):
     """Publica un mensaje asíncrono en RabbitMQ notificando la creación de la orden"""
     try:
         connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=RABBITMQ_HOST, heartbeat=600, blocked_connection_timeout=300)
+            pika.ConnectionParameters(
+                host=RABBITMQ_HOST,
+                connection_attempts=2,
+                retry_delay=1,
+                socket_timeout=2.0
+            )
         )
         channel = connection.channel()
-        # Declarar cola durable para asegurar la entrega
         channel.queue_declare(queue='order_created_queue', durable=True)
 
         message = json.dumps(order_data)
@@ -39,7 +43,7 @@ def publish_order_created_event(order_data: dict):
             routing_key='order_created_queue',
             body=message,
             properties=pika.BasicProperties(
-                delivery_mode=pika.DeliveryMode.Persistent  # Mensaje persistente en disco
+                delivery_mode=pika.DeliveryMode.Persistent
             )
         )
         connection.close()
@@ -85,7 +89,6 @@ def enrich_order_data(order: Order, client: httpx.Client) -> OrderResponse:
         customer_name=customer_name,
         status=order.status,
         total=float(order.total),
-        #created_at=order.created_at,
         items=enriched_items
     )
 
@@ -105,20 +108,27 @@ def get_order(order_id: int, db: Session = Depends(get_db)):
         return enrich_order_data(order, client)
 
 @app.post("/orders", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
-def create_order(order_data: OrderCreate, db: Session = Depends(get_db)):
+def create_order(
+    order_data: OrderCreate, 
+    background_tasks: BackgroundTasks, 
+    db: Session = Depends(get_db)
+):
     # 1. Validar cliente por HTTP
+    customer_name = "Desconocido"
     with httpx.Client() as client:
         try:
             cust_resp = client.get(f"{CUSTOMER_SERVICE_URL}/customers/{order_data.customer_id}")
             if cust_resp.status_code == 404:
                 raise HTTPException(status_code=400, detail="El cliente especificado no existe")
+            if cust_resp.status_code == 200:
+                customer_name = cust_resp.json().get("name", "Desconocido")
         except httpx.RequestError:
             raise HTTPException(status_code=503, detail="Customer Service no disponible")
-        
 
-    # 2. Validar productos y calcular el total llamando a product-service
+    # 2. Validar productos y calcular el total
     total_order = 0.0
     items_to_create = []
+    response_items = []
 
     with httpx.Client() as client:
         for item in order_data.items:
@@ -145,11 +155,18 @@ def create_order(order_data: OrderCreate, db: Session = Depends(get_db)):
                     "quantity": item.quantity,
                     "unit_price": unit_price
                 })
+                
+                # Guardamos para la respuesta instantánea
+                response_items.append({
+                    "product_id": item.product_id,
+                    "product_name": product.get("name", "Desconocido"),
+                    "quantity": item.quantity,
+                    "unit_price": unit_price
+                })
             except httpx.RequestError:
                 raise HTTPException(status_code=503, detail="Product Service no disponible")
-            
 
-    # 3. Guardar la orden en la base de datos
+    # 3. Guardar la orden en PostgreSQL
     new_order = Order(
         customer_id=order_data.customer_id,
         status="COMPLETED",
@@ -160,7 +177,8 @@ def create_order(order_data: OrderCreate, db: Session = Depends(get_db)):
     db.refresh(new_order)
 
     event_items = []
-    for item_data in items_to_create:
+    created_response_items = []
+    for idx, item_data in enumerate(items_to_create):
         order_item = OrderItem(
             order_id=new_order.id,
             product_id=item_data["product_id"],
@@ -176,15 +194,32 @@ def create_order(order_data: OrderCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_order)
 
-    # 4. PUBLICACIÓN ASÍNCRONA DEL EVENTO EN RABBITMQ
+    for idx, item in enumerate(new_order.items):
+        created_response_items.append(
+            OrderItemResponse(
+                id=item.id,
+                product_id=item.product_id,
+                product_name=response_items[idx]["product_name"],
+                quantity=item.quantity,
+                unit_price=float(item.unit_price)
+            )
+        )
+
+    # 4. PUBLICACIÓN ASÍNCRONA EN SEGUNDO PLANO (BackgroundTasks)
     event_payload = {
         "event": "OrderCreated",
         "order_id": new_order.id,
         "customer_id": new_order.customer_id,
         "items": event_items
     }
-    publish_order_created_event(event_payload)
+    background_tasks.add_task(publish_order_created_event, event_payload)
 
-    # Devuelve la orden construida con los nombres incluidos
-    with httpx.Client() as client:
-        return enrich_order_data(new_order, client)
+    # 5. Responder inmediatamente al cliente en menos de 200 ms
+    return OrderResponse(
+        id=new_order.id,
+        customer_id=new_order.customer_id,
+        customer_name=customer_name,
+        status=new_order.status,
+        total=float(new_order.total),
+        items=created_response_items
+    )
