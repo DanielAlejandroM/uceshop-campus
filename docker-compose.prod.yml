@@ -9,6 +9,11 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "+vm_args -rabbit total_memory_available_override_value 268435456"
+    deploy:
+      resources:
+        limits:
+          memory: 300M
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
