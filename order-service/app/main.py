@@ -213,7 +213,7 @@ def create_order(
         "customer_id": new_order.customer_id,
         "items": event_items
     }
-    background_tasks.add_task(publish_order_created_event, event_payload)
+    publish_order_created_event(event_payload)
 
     # 5. Responder inmediatamente al cliente en menos de 200 ms
     return OrderResponse(
