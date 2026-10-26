@@ -14,6 +14,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      default:
+        aliases:
+          - rabbitmq
 
   # --- CUSTOMER SERVICE & DB ---
   customer-db:
@@ -96,7 +100,7 @@ services:
       timeout: 5s
       retries: 3
 
- # --- ORDER SERVICE & DB ---
+  # --- ORDER SERVICE & DB ---
   order-db:
     image: postgres:15-alpine
     container_name: order-db
@@ -172,3 +176,7 @@ volumes:
   customer_db_data:
   product_db_data:
   order_db_data:
+
+networks:
+  default:
+    name: app_network
