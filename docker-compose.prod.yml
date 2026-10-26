@@ -21,10 +21,6 @@ services:
       timeout: 3s
       retries: 5
       start_period: 10s
-    networks:
-      default:
-        aliases:
-          - rabbitmq
 
   # --- CUSTOMER SERVICE & DB ---
   customer-db:
@@ -183,7 +179,3 @@ volumes:
   customer_db_data:
   product_db_data:
   order_db_data:
-
-networks:
-  default:
-    name: app_network
