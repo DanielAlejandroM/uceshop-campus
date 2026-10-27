@@ -1,13 +1,13 @@
 version: '3.9'
 
 services:
-  # --- RABBITMQ MESSAGE BROKER ---
+  # RABBITMQ 
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: rabbitmq
     ports:
-      - "5672:5672"     # Puerto del protocolo AMQP
-      - "15672:15672"   # Puerto del Panel Web de Administración (UI)
+      - "5672:5672"     
+      - "15672:15672"   
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
@@ -18,7 +18,7 @@ services:
       retries: 5
 
 
-  # --- CUSTOMER SERVICE & DB ---
+  # CUSTOMER SERVICE
   customer-db:
     image: postgres:15-alpine
     container_name: customer-db
@@ -60,7 +60,7 @@ services:
       retries: 3
 
 
-# --- PRODUCT SERVICE & DB ---
+# PRODUCT SERVICE
   product-db:
     image: postgres:15-alpine
     container_name: product-db
@@ -104,7 +104,7 @@ services:
       timeout: 5s
       retries: 3
 
-      # --- ORDER SERVICE ---
+  # ORDER SERVICE
   order-db:
     image: postgres:15-alpine
     container_name: order-db
@@ -154,14 +154,14 @@ services:
       timeout: 5s
       retries: 3
 
-# --- MONITOREO (PROMETHEUS & GRAFANA) ---
+# MONITOREO (PROMETHEUS y GRAFANA)
   prometheus:
     image: prom/prometheus:v2.49.1
     container_name: prometheus
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
-      - "9090:9090" # Puerto web de Prometheus
+      - "9090:9090" 
     depends_on:
       - customer-service
       - product-service
@@ -171,14 +171,13 @@ services:
     image: grafana/grafana:10.3.1
     container_name: grafana
     ports:
-      - "3000:3000" # Puerto web de Grafana
+      - "3000:3000" 
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
     depends_on:
       - prometheus
 
-# Declaración de volúmenes persistentes
 volumes:
   customer_db_data:
   product_db_data:
