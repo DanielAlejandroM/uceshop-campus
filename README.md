@@ -118,3 +118,5 @@ El cliente (desde Postman o la API pública) envía una solicitud de creación d
 - Auto Scaling Group (ASG) & ALB: Enlace a un Application Load Balancer público con tres Target Groups orientados a los puertos 8000, 8001 y 8002, garantizando auto-reparación (self-healing) y balanceo de carga.
 
 - Amazon API Gateway: Configuración de un punto de entrada unificado (HTTP API) enrutando el tráfico externo hacia el DNS del ALB.
+
+### Creado por: Daniel Alejandro Morocho - Estudiante egresado de la carrera de Ingeniería en Sistemas de la Universidad Central del Ecuador
