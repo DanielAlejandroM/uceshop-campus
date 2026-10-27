@@ -1,5 +1,5 @@
 services:
-  # --- RABBITMQ MESSAGE BROKER ---
+  # RABBITMQ
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: rabbitmq
@@ -22,7 +22,7 @@ services:
       retries: 5
       start_period: 10s
 
-  # --- CUSTOMER SERVICE & DB ---
+  # CUSTOMER SERVICE
   customer-db:
     image: postgres:15-alpine
     container_name: customer-db
@@ -61,7 +61,7 @@ services:
       timeout: 5s
       retries: 3
 
-  # --- PRODUCT SERVICE & DB ---
+  # PRODUCT SERVICE
   product-db:
     image: postgres:15-alpine
     container_name: product-db
@@ -103,7 +103,7 @@ services:
       timeout: 5s
       retries: 3
 
-  # --- ORDER SERVICE & DB ---
+  # ORDER SERVICE
   order-db:
     image: postgres:15-alpine
     container_name: order-db
@@ -151,7 +151,7 @@ services:
       timeout: 5s
       retries: 3
 
-  # --- PROMETHEUS & GRAFANA ---
+  # ROMETHEUS y GRAFANA 
   prometheus:
     image: prom/prometheus:v2.49.1
     container_name: prometheus

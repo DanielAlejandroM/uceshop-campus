@@ -1,19 +1,47 @@
-# Variables de entorno (¡Nunca subir contraseñas reales!)
+# Variables de Entorno y Claves de Seguridad
 .env
+.env.*
+*.pem
+*.key
+vockey
+aws_credentials
+.aws/
 
-# Archivos de Python y caché
+# Archivos de Caching y Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
+*.so
+
+# Entornos virtuales
 venv/
+.venv/
 env/
+ENV/
+env.bak/
+venv.bak/
 
-# Archivos de bases de datos locales
-*.sqlite3
-*.db
-
-# Configuraciones de IDE (VS Code)
+# Configuración de IDEs y Editores
 .vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
 
-# Docker
+# SO y Basura Local
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker, Logs y Archivos Temporales
+*.log
+docker-compose.override.yml
 .docker/
